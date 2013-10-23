@@ -58,7 +58,7 @@ class TSaslClientTransport(TTransportBase, CReadableTransport):
       raise TTransportException(
         type=TTransportException.NOT_OPEN,
         message="Already open!")
-    self.sasl = self.sasl_client_factory()
+    self.sasl = self.sasl_client_factory
 
     ret, chosen_mech, initial_response = self.sasl.start(self.mechanism)
     if not ret:

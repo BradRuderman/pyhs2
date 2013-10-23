@@ -7,24 +7,17 @@ import sasl
 from cloudera.thrift_sasl import TSaslClientTransport
 
 from TCLIService import TCLIService
-from TCLIService.ttypes import TOpenSessionReq, TGetTablesReq, TFetchResultsReq,\
-  TStatusCode, TGetResultSetMetadataReq, TGetColumnsReq, TType, TTypeId, \
-  TExecuteStatementReq, TGetOperationStatusReq, TFetchOrientation, TCloseOperationReq, \
-  TCloseSessionReq, TGetSchemasReq, TGetLogReq, TCancelOperationReq
 
-
+from cursor import Cursor
+from TCLIService.ttypes import TCloseSessionReq,TOpenSessionReq
 
 class Connection(object):
-    session = None
     client = None
-
-    def close(self):
-        req = TCloseSessionReq(sessionHandle=session)
-        client.CloseSession(req)
+    session = None
 
     def __init__(self, host=None, port=10000, authMechanism=None, user=None, password=None, database=None):
         authMechanisms = {'NOSASL', 'PLAIN', 'KERBEROS', 'LDAP'}
-        if authMechanism not in authMechanisms:
+        if authMechanism not in authMechanisms or authMechanism == 'KERBEROS':
             raise NotImplementedError('authMechanism is either not supported or not implemented')
         socket = TSocket(host, port)
         if authMechanism == 'NOSASL':
@@ -35,6 +28,14 @@ class Connection(object):
             saslc.setAttr("password", password)
             saslc.init()
             transport = TSaslClientTransport(saslc, "PLAIN", socket)
-        client = TCLIService.Client(TBinaryProtocol(transport))
+        self.client = TCLIService.Client(TBinaryProtocol(transport))
         transport.open()
+        res = self.client.OpenSession(TOpenSessionReq())
+        self.session = res.sessionHandle
 
+    def cursor(self):
+        return Cursor(self.client, self.session)
+
+    def close(self):
+        req = TCloseSessionReq(sessionHandle=self.session)
+        self.client.CloseSession(req)

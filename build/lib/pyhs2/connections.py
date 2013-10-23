@@ -18,15 +18,19 @@ class Connection(object):
     session = None
     client = None
 
-    def __init__(self, host=None, port=10000, authMechanism=None, user=None, passwd=None, db=None):
-        authMechanisms = {'NOSASL', 'PLAIN', 'KERBEROS', ''}
+    def __init__(self, host=None, port=10000, authMechanism=None, user=None, password=None, database=None):
+        authMechanisms = {'NOSASL', 'PLAIN', 'KERBEROS', 'LDAP'}
         if authMechanism not in authMechanisms:
             raise NotImplementedError('authMechanism is either not supported or not implemented')
         socket = TSocket(host, port)
         if auth == 'NOSASL':
             transport = TBufferedTransport(socket)
         else:
-            transport = TSaslClientTransport(sasl_factory, "PLAIN", socket)
+            saslc = sasl.Client()
+            saslc.setAttr("username", username)
+            saslc.setAttr("password", password)
+            saslc.init()
+            transport = TSaslClientTransport(saslc, "PLAIN", socket)
         client = TCLIService.Client(TBinaryProtocol(transport))
         transport.open()
 
