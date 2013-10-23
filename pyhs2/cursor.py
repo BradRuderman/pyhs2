@@ -37,10 +37,10 @@ def get_value(colValue):
 class Cursor(object):
     session = None
     client = None
-    operationHandle =  None
-    def __init__(self, _client, session):
-        res = _client.OpenSession(TOpenSessionReq())
-        self.session = res.sessionHandle
+    operationHandle = None
+
+    def __init__(self, _client, sessionHandle):
+        self.session = sessionHandle
         self.client = _client
 
     def execute(self, hql):
@@ -50,9 +50,17 @@ class Cursor(object):
 
     def fetch(self):
         rows = []
-        fetchReq = TFetchResultsReq(operationHandle=self.operationHandle, orientation=TFetchOrientation.FETCH_NEXT, maxRows=100);
+        fetchReq = TFetchResultsReq(operationHandle=self.operationHandle,
+                                    orientation=TFetchOrientation.FETCH_NEXT,
+                                    maxRows=100)
         self._fetch(rows, fetchReq)
         return rows
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, _exc_type, _exc_value, _traceback):
+        self.close()
 
     def _fetch(self, rows, fetchReq):
         resultsRes = self.client.FetchResults(fetchReq)
