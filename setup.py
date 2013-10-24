@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name='pyhs2',
@@ -14,4 +14,7 @@ setup(
         "sasl",
         "thrift",
     ],
+    test_suite='pyhs2.test',
+    tests_require=["mock"]
+
 )
