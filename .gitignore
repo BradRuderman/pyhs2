@@ -36,3 +36,4 @@ nosetests.xml
 .pydevproject
 
 .DS_Store
+*.pyc
