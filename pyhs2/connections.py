@@ -33,6 +33,12 @@ class Connection(object):
         res = self.client.OpenSession(TOpenSessionReq())
         self.session = res.sessionHandle
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, _exc_type, _exc_value, _traceback):
+        self.close()
+
     def cursor(self):
         return Cursor(self.client, self.session)
 
