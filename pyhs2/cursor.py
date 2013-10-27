@@ -1,7 +1,7 @@
 from TCLIService.ttypes import TOpenSessionReq, TGetTablesReq, TFetchResultsReq,\
   TStatusCode, TGetResultSetMetadataReq, TGetColumnsReq, TType, TTypeId, \
   TExecuteStatementReq, TGetOperationStatusReq, TFetchOrientation, TCloseOperationReq, \
-  TCloseSessionReq, TGetSchemasReq, TGetLogReq, TCancelOperationReq
+  TCloseSessionReq, TGetSchemasReq, TGetLogReq, TCancelOperationReq, TGetCatalogsReq
 
 from error import Pyhs2Exception
 
@@ -47,10 +47,10 @@ class Cursor(object):
 
     def execute(self, hql):
         query = TExecuteStatementReq(self.session, statement=hql, confOverlay={})
-        response = self.client.ExecuteStatement(query)
-        self.operationHandle = response.operationHandle
-        if response.status.errorCode is not None:
-            raise Pyhs2Exception(response.status.errorCode, response.status.errorMessage)
+        res = self.client.ExecuteStatement(query)
+        self.operationHandle = res.operationHandle
+        if res.status.errorCode is not None:
+            raise Pyhs2Exception(res.status.errorCode, res.status.errorMessage)
         
     def fetch(self):
         rows = []
@@ -59,6 +59,29 @@ class Cursor(object):
                                     maxRows=100)
         self._fetch(rows, fetchReq)
         return rows
+
+    def getSchema(self):
+        if self.operationHandle:
+            req = TGetResultSetMetadataReq(self.operationHandle)
+            res = self.client.GetResultSetMetadata(req)
+            if res.schema is not None:
+                cols = []
+                for c in self.client.GetResultSetMetadata(req).schema.columns:
+                    col = {}
+                    col['type'] = get_type(c.typeDesc)
+                    col['columnName'] = c.columnName
+                    col['comment'] = c.comment
+                    cols.append(col)
+                return cols
+        return None
+
+    def getDatabases(self):
+        req = TGetSchemasReq(self.session)
+        res = self.client.GetSchemas(req)
+        self.operationHandle = res.operationHandle
+        if res.status.errorCode is not None:
+            raise Pyhs2Exception(res.status.errorCode, res.status.errorMessage)
+        return self.fetch()
 
     def __enter__(self):
         return self

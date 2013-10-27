@@ -7,6 +7,15 @@ with pyhs2.connect(host='localhost',
                    password='test',
                    database='default') as conn:
     with conn.cursor() as cur:
-        cur.execute("show tables")
+    	#Show databases
+    	print cur.getDatabases()
+
+    	#Execute query
+        cur.execute("select * from table")
+
+        #Return column info from query
+        print cur.getSchema()
+
+        #Fetch table results
         for i in cur.fetch():
             print i
