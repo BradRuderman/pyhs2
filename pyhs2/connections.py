@@ -32,6 +32,10 @@ class Connection(object):
         transport.open()
         res = self.client.OpenSession(TOpenSessionReq())
         self.session = res.sessionHandle
+        if database is not None:
+            with self.cursor() as cur:
+                query = "USE {0}".format(database)
+                cur.execute(query) 
 
     def __enter__(self):
         return self
