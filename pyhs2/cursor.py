@@ -3,6 +3,8 @@ from TCLIService.ttypes import TOpenSessionReq, TGetTablesReq, TFetchResultsReq,
   TExecuteStatementReq, TGetOperationStatusReq, TFetchOrientation, TCloseOperationReq, \
   TCloseSessionReq, TGetSchemasReq, TGetLogReq, TCancelOperationReq
 
+from error import Pyhs2Exception
+
 def get_type(typeDesc):
     for ttype in typeDesc.types:
         if ttype.primitiveEntry is not None:
@@ -47,7 +49,9 @@ class Cursor(object):
         query = TExecuteStatementReq(self.session, statement=hql, confOverlay={})
         response = self.client.ExecuteStatement(query)
         self.operationHandle = response.operationHandle
-
+        if response.status.errorCode is not None:
+            raise Pyhs2Exception(response.status.errorCode, response.status.errorMessage)
+        
     def fetch(self):
         rows = []
         fetchReq = TFetchResultsReq(operationHandle=self.operationHandle,
@@ -75,5 +79,6 @@ class Cursor(object):
             return rows
 
     def close(self):
-        req = TCloseOperationReq(operationHandle=self.operationHandle)
-        self.client.CloseOperation(req) 
+        if self.operationHandle is not None:
+            req = TCloseOperationReq(operationHandle=self.operationHandle)
+            self.client.CloseOperation(req) 
