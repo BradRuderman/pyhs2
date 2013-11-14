@@ -12,4 +12,4 @@ Contact @bradruderman or bradruderman@gmail.com with questions.
 
 Enjoy
 
-![alt tag](http://url/to/img.png)
+![alt tag](https://rs.gwallet.com/r1/pixel/x11399)
