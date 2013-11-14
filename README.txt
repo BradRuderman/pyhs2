@@ -11,3 +11,5 @@ Please log all issues/new feature requests under the issues tab and I will respo
 Contact @bradruderman or bradruderman@gmail.com with questions.
 
 Enjoy
+
+![alt tag](http://url/to/img.png)
