@@ -16,9 +16,13 @@ class Connection(object):
     session = None
 
     def __init__(self, host=None, port=10000, authMechanism=None, user=None, password=None, database=None):
-        authMechanisms = {'NOSASL', 'PLAIN', 'KERBEROS', 'LDAP'}
+        authMechanisms = set(['NOSASL', 'PLAIN', 'KERBEROS', 'LDAP'])
         if authMechanism not in authMechanisms or authMechanism == 'KERBEROS':
             raise NotImplementedError('authMechanism is either not supported or not implemented')
+        #Must set a password for thrift, even if it doesn't need one
+        #Open issue with python-sasl
+        if authMechanism = 'PLAIN' and (password is None or len(password) == 0):
+            password = 'password'
         socket = TSocket(host, port)
         if authMechanism == 'NOSASL':
             transport = TBufferedTransport(socket)
