@@ -9,7 +9,7 @@ setup(
     url='https://github.com/BradRuderman/pyhs2',
     license='LICENSE.txt',
     description='Python Hive Server 2 Client Driver',
-    long_description=open('README.txt').read(),
+    long_description=open('README.md').read(),
     install_requires=[
         "sasl",
         "thrift",
