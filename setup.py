@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='pyhs2',
-    version='0.3.2',
+    version='0.4',
     author='Brad Ruderman',
     author_email='bradruderman@gmail.com',
     packages=['pyhs2', 'pyhs2/cloudera', 'pyhs2/TCLIService'],
