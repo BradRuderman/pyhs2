@@ -56,7 +56,7 @@ class Cursor(object):
         rows = []
         fetchReq = TFetchResultsReq(operationHandle=self.operationHandle,
                                     orientation=TFetchOrientation.FETCH_NEXT,
-                                    maxRows=100)
+                                    maxRows=10000)
         self._fetch(rows, fetchReq)
         return rows
 
