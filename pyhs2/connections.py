@@ -21,7 +21,7 @@ class Connection(object):
             raise NotImplementedError('authMechanism is either not supported or not implemented')
         #Must set a password for thrift, even if it doesn't need one
         #Open issue with python-sasl
-        if authMechanism = 'PLAIN' and (password is None or len(password) == 0):
+        if authMechanism == 'PLAIN' and (password is None or len(password) == 0):
             password = 'password'
         socket = TSocket(host, port)
         if authMechanism == 'NOSASL':
