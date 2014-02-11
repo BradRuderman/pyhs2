@@ -12,12 +12,13 @@ from cursor import Cursor
 from TCLIService.ttypes import TCloseSessionReq,TOpenSessionReq
 
 class Connection(object):
+    DEFAULT_KRB_SERVICE = 'hive'
     client = None
     session = None
 
-    def __init__(self, host=None, port=10000, authMechanism=None, user=None, password=None, database=None):
+    def __init__(self, host=None, port=10000, authMechanism=None, user=None, password=None, database=None, configuration=None):
         authMechanisms = set(['NOSASL', 'PLAIN', 'KERBEROS', 'LDAP'])
-        if authMechanism not in authMechanisms or authMechanism == 'KERBEROS':
+        if authMechanism not in authMechanisms:
             raise NotImplementedError('authMechanism is either not supported or not implemented')
         #Must set a password for thrift, even if it doesn't need one
         #Open issue with python-sasl
@@ -27,14 +28,22 @@ class Connection(object):
         if authMechanism == 'NOSASL':
             transport = TBufferedTransport(socket)
         else:
+            sasl_mech = 'PLAIN'
             saslc = sasl.Client()
             saslc.setAttr("username", user)
             saslc.setAttr("password", password)
+            if authMechanism == 'KERBEROS':
+                krb_host,krb_service = self._get_krb_settings(host, configuration)
+                sasl_mech = 'GSSAPI'
+                saslc.setAttr("host", krb_host)
+                saslc.setAttr("service", krb_service)
+
             saslc.init()
-            transport = TSaslClientTransport(saslc, "PLAIN", socket)
+            transport = TSaslClientTransport(saslc, sasl_mech, socket)
+
         self.client = TCLIService.Client(TBinaryProtocol(transport))
         transport.open()
-        res = self.client.OpenSession(TOpenSessionReq())
+        res = self.client.OpenSession(TOpenSessionReq(configuration=configuration))
         self.session = res.sessionHandle
         if database is not None:
             with self.cursor() as cur:
@@ -46,6 +55,19 @@ class Connection(object):
 
     def __exit__(self, _exc_type, _exc_value, _traceback):
         self.close()
+
+    def _get_krb_settings(self, default_host, config):
+        host = default_host
+        service = self.DEFAULT_KRB_SERVICE
+
+        if config is not None:
+            if 'krb_host' in config:
+                host = config['krb_host']
+
+            if 'krb_service' in config:
+                service = config['krb_service']
+
+        return host, service
 
     def cursor(self):
         return Cursor(self.client, self.session)
