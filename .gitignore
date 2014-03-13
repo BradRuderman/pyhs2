@@ -38,3 +38,5 @@ nosetests.xml
 .DS_Store
 *.pyc
 test.py
+.idea
+venv
