@@ -1,7 +1,7 @@
 from TCLIService.ttypes import TOpenSessionReq, TGetTablesReq, TFetchResultsReq,\
   TStatusCode, TGetResultSetMetadataReq, TGetColumnsReq, TType, TTypeId, \
   TExecuteStatementReq, TGetOperationStatusReq, TFetchOrientation, TCloseOperationReq, \
-  TCloseSessionReq, TGetSchemasReq, TGetLogReq, TCancelOperationReq, TGetCatalogsReq
+  TCloseSessionReq, TGetSchemasReq, TGetLogReq, TCancelOperationReq, TGetCatalogsReq, TGetInfoReq
 
 from error import Pyhs2Exception
 
@@ -40,6 +40,7 @@ class Cursor(object):
     session = None
     client = None
     operationHandle = None
+    hasMoreRows = True
 
     def __init__(self, _client, sessionHandle):
         self.session = sessionHandle
@@ -53,6 +54,12 @@ class Cursor(object):
             raise Pyhs2Exception(res.status.errorCode, res.status.errorMessage)
         
     def fetch(self):
+        rows = []
+        while self.hasMoreRows:
+            rows = rows + self.fetchSet()
+        return rows
+
+    def fetchSet(self):
         rows = []
         fetchReq = TFetchResultsReq(operationHandle=self.operationHandle,
                                     orientation=TFetchOrientation.FETCH_NEXT,
@@ -90,15 +97,14 @@ class Cursor(object):
         self.close()
 
     def _fetch(self, rows, fetchReq):
-        while True:
-            resultsRes = self.client.FetchResults(fetchReq)
-            for row in resultsRes.results.rows:
-                rowData= []
-                for i, col in enumerate(row.colVals):
-                    rowData.append(get_value(col))
-                rows.append(rowData)
-            if len(resultsRes.results.rows) == 0:
-                break
+        resultsRes = self.client.FetchResults(fetchReq)
+        for row in resultsRes.results.rows:
+            rowData= []
+            for i, col in enumerate(row.colVals):
+                rowData.append(get_value(col))
+            rows.append(rowData)
+        if len(resultsRes.results.rows) == 0:
+            self.hasMoreRows = False
         return rows
 
     def close(self):
