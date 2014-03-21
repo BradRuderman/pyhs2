@@ -176,7 +176,16 @@ class Cursor(object):
         self._cursorLock.release()
         return recs
 
+    def __iter__(self):
+        """ returns an iterator object. no special code needed here. """
+        return self
 
+    def next(self):
+        """ iterator-protocol for fetch next row. """
+        row = self.fetchone()
+        if row is None:
+           raise StopIteration 
+        return row
 
     def getSchema(self):
         if self.operationHandle:
