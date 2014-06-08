@@ -43,7 +43,7 @@ class Connection(object):
 
         self.client = TCLIService.Client(TBinaryProtocol(transport))
         transport.open()
-        res = self.client.OpenSession(TOpenSessionReq(configuration=configuration))
+        res = self.client.OpenSession(TOpenSessionReq(username=user, password=password, configuration=configuration))
         self.session = res.sessionHandle
         if database is not None:
             with self.cursor() as cur:
