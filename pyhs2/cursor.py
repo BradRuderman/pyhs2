@@ -1,9 +1,10 @@
 from TCLIService.ttypes import TOpenSessionReq, TGetTablesReq, TFetchResultsReq,\
   TStatusCode, TGetResultSetMetadataReq, TGetColumnsReq, TType, TTypeId, \
   TExecuteStatementReq, TGetOperationStatusReq, TFetchOrientation, TCloseOperationReq, \
-  TCloseSessionReq, TGetSchemasReq, TGetLogReq, TCancelOperationReq, TGetCatalogsReq
+  TCloseSessionReq, TGetSchemasReq, TGetLogReq, TCancelOperationReq, TGetCatalogsReq, TGetInfoReq
 
 from error import Pyhs2Exception
+import threading
 
 def get_type(typeDesc):
     for ttype in typeDesc.types:
@@ -40,10 +41,19 @@ class Cursor(object):
     session = None
     client = None
     operationHandle = None
+    hasMoreRows = True
+    MAX_BLOCK_SIZE = 10000
+    arraysize = 1000
+    _currentRecordNum = None
+    _currentBlock = None
+    _standbyBlock = None
+    _blockRequestInProgress = False
+    _cursorLock = None
 
     def __init__(self, _client, sessionHandle):
         self.session = sessionHandle
         self.client = _client
+        self._cursorLock = threading.RLock()
 
     def execute(self, hql):
         query = TExecuteStatementReq(self.session, statement=hql, confOverlay={})
@@ -54,11 +64,128 @@ class Cursor(object):
         
     def fetch(self):
         rows = []
+        while self.hasMoreRows:
+            rows = rows + self.fetchSet()
+        return rows
+
+    def fetchSet(self):
+        rows = []
         fetchReq = TFetchResultsReq(operationHandle=self.operationHandle,
                                     orientation=TFetchOrientation.FETCH_NEXT,
                                     maxRows=10000)
         self._fetch(rows, fetchReq)
         return rows
+
+    def _fetchBlock(self):
+        """ internal use only.
+	 get a block of rows from the server and put in standby block.
+         future enhancements:
+         (1) locks for multithreaded access (protect from multiple calls)
+         (2) allow for prefetch by use of separate thread
+        """
+        # make sure that another block request is not standing
+        if self._blockRequestInProgress :
+           # need to wait here before returning... (TODO)
+           return
+
+        # make sure another block request has not completed meanwhile
+        if self._standbyBlock is not None: 
+           return
+
+        self._blockRequestInProgress = True
+        fetchReq = TFetchResultsReq(operationHandle=self.operationHandle,
+                                    orientation=TFetchOrientation.FETCH_NEXT,
+                                    maxRows=self.arraysize)
+        self._standbyBlock = self._fetch([],fetchReq)
+        self._blockRequestInProgress = False
+        return
+
+    def fetchone(self):
+        """ fetch a single row. a lock object is used to assure that a single 
+	 record will be fetched and all housekeeping done properly in a 
+	 multithreaded environment.
+         as getting a block is currently synchronous, this also protects 
+	 against multiple block requests (but does not protect against 
+	 explicit calls to to _fetchBlock())
+        """
+        self._cursorLock.acquire()
+
+        # if there are available records in current block, 
+	# return one and advance counter
+        if self._currentBlock is not None and self._currentRecordNum < len(self._currentBlock):
+           x = self._currentRecordNum
+           self._currentRecordNum += 1
+           self._cursorLock.release()
+           return self._currentBlock[x]
+
+        # if no standby block is waiting, fetch a block
+        if self._standbyBlock is None:
+           # TODO - make sure exceptions due to problems in getting the block 
+	   # of records from the server are handled properly
+           self._fetchBlock()
+
+        # if we still do not have a standby block (or it is empty), 
+	# return None - no more data is available
+        if self._standbyBlock is None or len(self._standbyBlock)==0:
+           self._cursorLock.release()
+           return None
+
+        #  move the standby to current
+        self._currentBlock = self._standbyBlock 
+        self._standbyBlock = None
+        self._currentRecordNum = 1
+
+        # return the first record
+        self._cursorLock.release()
+        return self._currentBlock[0]
+
+    def fetchmany(self,size=-1):
+        """ return a sequential set of records. This is guaranteed by locking, 
+	 so that no other thread can grab a few records while a set is fetched.
+         this has the side effect that other threads may have to wait for 
+         an arbitrary long time for the completion of the current request.
+        """
+        self._cursorLock.acquire()
+
+        # default value (or just checking that someone did not put a ridiculous size)
+        if size < 0 or size > MAX_BLOCK_SIZE:
+           size = self.arraysize
+        recs = []
+        for i in range(0,size):
+            recs.append(self.fetchone())
+
+        self._cursorLock.release()
+        return recs
+
+    def fetchall(self):
+        """ returns the remainder of records from the query. This is 
+	 guaranteed by locking, so that no other thread can grab a few records 
+	 while the set is fetched. This has the side effect that other threads 
+	 may have to wait for an arbitrary long time until this query is done 
+	 before they can return (obviously with None).
+        """
+        self._cursorLock.acquire()
+
+        recs = []
+        while True:
+            rec = self.fetchone()
+            if rec is None:
+               break
+            recs.append(rec)
+
+        self._cursorLock.release()
+        return recs
+
+    def __iter__(self):
+        """ returns an iterator object. no special code needed here. """
+        return self
+
+    def next(self):
+        """ iterator-protocol for fetch next row. """
+        row = self.fetchone()
+        if row is None:
+           raise StopIteration 
+        return row
 
     def getSchema(self):
         if self.operationHandle:
@@ -90,15 +217,14 @@ class Cursor(object):
         self.close()
 
     def _fetch(self, rows, fetchReq):
-        while True:
-            resultsRes = self.client.FetchResults(fetchReq)
-            for row in resultsRes.results.rows:
-                rowData= []
-                for i, col in enumerate(row.colVals):
-                    rowData.append(get_value(col))
-                rows.append(rowData)
-            if len(resultsRes.results.rows) == 0:
-                break
+        resultsRes = self.client.FetchResults(fetchReq)
+        for row in resultsRes.results.rows:
+            rowData= []
+            for i, col in enumerate(row.colVals):
+                rowData.append(get_value(col))
+            rows.append(rowData)
+        if len(resultsRes.results.rows) == 0:
+            self.hasMoreRows = False
         return rows
 
     def close(self):
