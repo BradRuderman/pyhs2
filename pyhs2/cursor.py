@@ -231,3 +231,23 @@ class Cursor(object):
         if self.operationHandle is not None:
             req = TCloseOperationReq(operationHandle=self.operationHandle)
             self.client.CloseOperation(req) 
+
+
+class SSCursor(Cursor):
+    """
+    Unbuffered Cursor, mainly useful for queries that return a lot of data,
+    or for connections to remote servers over a slow network.
+    """
+    def fetch(self):    
+        fetchReq = TFetchResultsReq(operationHandle=self.operationHandle,
+                                    orientation=TFetchOrientation.FETCH_NEXT,
+                                    maxRows=10000)
+        while True:
+            resultsRes = self.client.FetchResults(fetchReq)
+            for row in resultsRes.results.rows:
+                rowData= []
+                for col in row.colVals:
+                    rowData.append(get_value(col))
+                yield rowData
+            if len(resultsRes.results.rows) == 0:
+                break

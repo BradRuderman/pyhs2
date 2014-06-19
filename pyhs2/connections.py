@@ -16,7 +16,7 @@ class Connection(object):
     client = None
     session = None
 
-    def __init__(self, host=None, port=10000, authMechanism=None, user=None, password=None, database=None, configuration=None):
+    def __init__(self, host=None, port=10000, authMechanism=None, user=None, password=None, database=None, configuration=None, cursorclass=Cursor):
         authMechanisms = set(['NOSASL', 'PLAIN', 'KERBEROS', 'LDAP'])
         if authMechanism not in authMechanisms:
             raise NotImplementedError('authMechanism is either not supported or not implemented')
@@ -69,8 +69,10 @@ class Connection(object):
 
         return host, service
 
-    def cursor(self):
-        return Cursor(self.client, self.session)
+    def cursor(self, cursor = None):
+        if cursor:
+            return cursor(self.client, self.session)
+        return self.cursorclass(self.client, self.session)
 
     def close(self):
         req = TCloseSessionReq(sessionHandle=self.session)
