@@ -16,7 +16,7 @@ class Connection(object):
     client = None
     session = None
 
-    def __init__(self, host=None, port=10000, authMechanism=None, user=None, password=None, database=None, configuration=None):
+    def __init__(self, host=None, port=10000, authMechanism=None, user=None, password=None, database=None, configuration=None, timeout=None):
         authMechanisms = set(['NOSASL', 'PLAIN', 'KERBEROS', 'LDAP'])
         if authMechanism not in authMechanisms:
             raise NotImplementedError('authMechanism is either not supported or not implemented')
@@ -25,6 +25,7 @@ class Connection(object):
         if authMechanism == 'PLAIN' and (password is None or len(password) == 0):
             password = 'password'
         socket = TSocket(host, port)
+        socket.setTimeout(timeout)
         if authMechanism == 'NOSASL':
             transport = TBufferedTransport(socket)
         else:
