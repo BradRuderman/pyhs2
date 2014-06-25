@@ -72,6 +72,16 @@ class Connection(object):
     def cursor(self):
         return Cursor(self.client, self.session)
 
+    def commit( self ):
+        """HIve doesn't support transactions; does nothing."""
+        # PEP 249
+        pass
+
+    def rollback( self ):
+        """HIve doesn't support transactions; raises NotSupportedError"""
+        # PEP 249
+        pass
+
     def close(self):
         req = TCloseSessionReq(sessionHandle=self.session)
         self.client.CloseSession(req)
