@@ -56,6 +56,7 @@ class Cursor(object):
         self._cursorLock = threading.RLock()
 
     def execute(self, hql):
+        self.hasMoreRows = True
         query = TExecuteStatementReq(self.session, statement=hql, confOverlay={})
         res = self.client.ExecuteStatement(query)
         self.operationHandle = res.operationHandle
