@@ -149,7 +149,7 @@ class Cursor(object):
         self._cursorLock.acquire()
 
         # default value (or just checking that someone did not put a ridiculous size)
-        if size < 0 or size > MAX_BLOCK_SIZE:
+        if size < 0 or size > self.MAX_BLOCK_SIZE:
            size = self.arraysize
         recs = []
         for i in range(0,size):
