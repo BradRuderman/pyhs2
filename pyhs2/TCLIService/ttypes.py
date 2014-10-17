@@ -91,8 +91,8 @@ class TTypeId:
     "DECIMAL_TYPE": 15,
     "NULL_TYPE": 16,
     "DATE_TYPE": 17,
-    "VARCHAR_TYPE": 17,
-    "CHAR_TYPE": 18
+    "VARCHAR_TYPE": 18,
+    "CHAR_TYPE": 19
   }
 
 class TStatusCode:
