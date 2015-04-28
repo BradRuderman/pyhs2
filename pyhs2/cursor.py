@@ -49,11 +49,13 @@ class Cursor(object):
     _standbyBlock = None
     _blockRequestInProgress = False
     _cursorLock = None
+    description = None
 
     def __init__(self, _client, sessionHandle):
         self.session = sessionHandle
         self.client = _client
         self._cursorLock = threading.RLock()
+        self.description = []
 
     def execute(self, hql):
         self.hasMoreRows = True
@@ -62,7 +64,11 @@ class Cursor(object):
         self.operationHandle = res.operationHandle
         if res.status.errorCode is not None:
             raise Pyhs2Exception(res.status.errorCode, res.status.errorMessage)
-        
+
+        cols = self.getSchema()
+        if cols is not None:
+            self.description = [(col['columnName'], col['type'], None, None, None, None, None) for col in cols]
+
     def fetch(self):
         rows = []
         while self.hasMoreRows:
