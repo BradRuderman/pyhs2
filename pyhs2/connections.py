@@ -31,8 +31,10 @@ class Connection(object):
         else:
             sasl_mech = 'PLAIN'
             saslc = sasl.Client()
-            saslc.setAttr("username", user)
-            saslc.setAttr("password", password)
+            if user:
+                saslc.setAttr("username", user)
+            if password:
+                saslc.setAttr("password", password)
             if authMechanism == 'KERBEROS':
                 krb_host,krb_service = self._get_krb_settings(host, configuration)
                 sasl_mech = 'GSSAPI'
