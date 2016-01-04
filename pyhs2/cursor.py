@@ -43,7 +43,7 @@ class Cursor(object):
     operationHandle = None
     hasMoreRows = True
     MAX_BLOCK_SIZE = 10000
-    arraysize = 1000
+    arraysize = 700
     _currentRecordNum = None
     _currentBlock = None
     _standbyBlock = None
