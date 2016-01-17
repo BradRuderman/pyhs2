@@ -2,6 +2,7 @@ import sys
 
 from thrift.protocol.TBinaryProtocol import TBinaryProtocol
 from thrift.transport.TSocket import TSocket
+from thrift.transport.TSSLSocket import TSSLSocket
 from thrift.transport.TTransport import TBufferedTransport
 import sasl
 from cloudera.thrift_sasl import TSaslClientTransport
@@ -16,7 +17,7 @@ class Connection(object):
     client = None
     session = None
 
-    def __init__(self, host=None, port=10000, authMechanism=None, user=None, password=None, database=None, configuration=None, timeout=None):
+    def __init__(self, host=None, port=10000, authMechanism=None, user=None, password=None, database=None, configuration=None, timeout=None, ssl=False, ssl_validate=True):
         authMechanisms = set(['NOSASL', 'PLAIN', 'KERBEROS', 'LDAP'])
         if authMechanism not in authMechanisms:
             raise NotImplementedError('authMechanism is either not supported or not implemented')
@@ -24,7 +25,11 @@ class Connection(object):
         #Open issue with python-sasl
         if authMechanism == 'PLAIN' and (password is None or len(password) == 0):
             password = 'password'
-        socket = TSocket(host, port)
+        socket = None
+        if ssl:
+            socket = TSSLSocket(host, port, ssl_validate)
+        else:
+            socket = TSocket(host, port)
         socket.setTimeout(timeout)
         if authMechanism == 'NOSASL':
             transport = TBufferedTransport(socket)
