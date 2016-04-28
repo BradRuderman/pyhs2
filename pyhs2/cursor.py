@@ -153,7 +153,10 @@ class Cursor(object):
            size = self.arraysize
         recs = []
         for i in range(0,size):
-            recs.append(self.fetchone())
+            rec = self.fetchone()
+            if rec is None:
+                break
+            recs.append(rec)
 
         self._cursorLock.release()
         return recs
