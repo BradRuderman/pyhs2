@@ -138,7 +138,7 @@ class Cursor(object):
 
         # return the first record
         self._cursorLock.release()
-        return self._currentBlock[0]
+        return [val.decode('utf-8') if isinstance(val, str) else val for val in self._currentBlock[0]]
 
     def fetchmany(self,size=-1):
         """ return a sequential set of records. This is guaranteed by locking, 
